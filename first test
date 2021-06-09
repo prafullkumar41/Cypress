@@ -1,0 +1,320 @@
+/// <reference types = "cypress" />
+
+
+describe('All test cases', () => {
+  it('Finding elements i.e. types of locators', () => {
+    
+    cy.visit('/')// Provide the route path of our application from cypress.json
+    cy.contains('Forms').click()
+    cy.contains('Form Layouts').click()
+
+    //by Tag name
+    cy.get('input')
+
+    //by ID
+    cy.get('#inputEmail1')
+
+    //by Class Name
+    cy.get('.input-full-width')
+
+    //by Attribute Name
+    cy.get("[placeholder]")
+
+    //by Attribute Name and Value
+    cy.get('[placeholder="Email"]')
+
+    //by Class Value: We should provide the entire value not just one value
+    cy.get('[class="input-full-width size-medium shape-rectangle"]')
+
+    //by Tag name and Attribute with Value
+    cy. get('input[placeholder="Email"]')
+
+    //by Two Different Attribute Value
+    cy.get('[placeholder="Email"][type="email"]')
+
+    //by Tag, Attribute with Value, ID and Class Name
+    cy.get('input[placeholder="Email"]#inputEmail1.input-full-width')
+
+    //The most recommended way by Cypress is to create own cypress identifier
+    cy.get('[data-cy="imputEmail1"]')
+  })
+
+  it('Finding elements i.e. types of locators part 2', () => {
+    cy.visit('/')// Provide the route path of our application from cypress.json
+    cy.contains('Forms').click()
+    cy.contains('Form Layouts').click()
+
+    cy.get('[data-cy="signInButton"]')
+
+    cy.contains('Sign in')//Finds element by text 
+                          //it is case sensitive always look into DOM and gives the first matched
+
+    cy.contains('[ng-reflect-status="warning"]','Sign in') //For particular combination
+
+    //Finding element from parent
+    cy.get('#inputPassword3')
+      .parents('form')
+      .find('button')//find command is only to find the child element of parent
+      .should('contain','Sign in')
+      .parents('form')
+      .find('nb-checkbox')
+      .click()
+  })
+
+  it('Then and Wrap methods', () => {
+    cy.visit('/')
+    cy.contains('Forms').click()
+    cy.contains('Form Layouts').click()
+
+    // cy.contains('nb-card','Using the Grid')
+    //   .find('[for="inputEmail1"]')
+    //   .should('contain','Email')
+
+    // cy.contains('nb-card','Using the Grid')  
+    //   .find('[for="inputPassword2"]')
+    //   .should('contain','Password')
+
+    // cy.contains('nb-card','Basic form')
+    //   .find('[for="exampleInputEmail1"]')
+    //   .should('contain','Email address')
+
+    // cy.contains('nb-card','Basic form')  
+    //   .find('[for="exampleInputPassword1"]')
+    //   .should('contain','Password')
+
+    //Lot of repetion , Since cypress is asynchronous we can do it using then method
+    cy.contains('nb-card','Using the Grid').then( (firstForm) => {
+      const emailLabelFirst = firstForm.find('[for="inputEmail1"]').text()
+      const passwordLabelFirst = firstForm.find('[for="inputPassword2"]').text()
+      expect(emailLabelFirst).to.equal('Email')
+      expect(passwordLabelFirst).to.equal('Password')
+
+      cy.contains('nb-card','Basic form').then( (secondForm) => {
+        const emailLabelSecond = secondForm.find('[for="exampleInputEmail1"]').text()
+        const passwordLabelSecond = secondForm.find('[for="exampleInputPassword1"]').text()
+        expect(passwordLabelFirst).to.equal(passwordLabelSecond)
+
+        //Since the call back method used by then is in Jquery Element(thats why expect is used not should) 
+        //to covert it back to Cypress chain element we would call wrap function
+        cy.wrap(emailLabelSecond).should('contain','Email address')
+
+      })
+  
+    })
+
+  })
+
+  it('Invoke Command third method how to get text value and assertion example', () => {
+    cy.visit('/')
+    cy.contains('Forms').click()
+    cy.contains('Form Layouts').click()
+
+    //1st method we learnt
+    cy.get('[for="exampleInputEmail1"]')
+      .should('contain','Email address')
+      .should('have.class','label')//****Assertions example */
+      .and('have.text','Email address')
+
+    //2nd method we learnt
+    cy.get('[for="exampleInputEmail1"]').then( (label) => {
+      expect(label.text()).to.equal('Email address')
+      expect(label).to.have.class('label')
+      expect(label).to.have.text('Email address')
+    })
+
+    //3rd method invoke method
+    //!st use case for Invoke
+    cy.get('[for="exampleInputEmail1"]').invoke('text').then( text => {
+      expect(text).to.equal('Email address')
+    })
+
+    //Second use case for Invoke *****imp
+    cy.contains('nb-card','Basic form')
+      .find('nb-checkbox')
+      .click()
+      .find(".custom-checkbox")
+      .invoke('attr','class')
+      .should('contain','checked')
+  })
+
+  it('Assert Property using Date Picker and Invoke', () => {
+
+    function selectDayFromCurrent(day){
+      let date = new Date() //Current date,day,time object
+      // let currentDate = date.getDate()//current date of the month
+      date.setDate(date.getDate() + day)
+      let futureDay = date.getDate()
+      // let futureMonth = date.getMonth()//Number of the Month
+      let futureMonth = date.toLocaleString('default', {month:'short'})
+      let dateAsserted = futureMonth+' '+futureDay+', '+date.getFullYear()
+      cy.get('nb-calendar-navigation').invoke('attr','ng-reflect-date').then( dateAttribute => {
+        if (!dateAttribute.includes(futureMonth)) {
+          cy.get('[data-name="chevron-right"]').click()
+          selectDayFromCurrent(day)
+        } else {
+          cy.get('nb-calendar-day-picker [class="day-cell ng-star-inserted"]').contains(futureDay).click()
+        }
+      })
+    return dateAsserted
+  }
+
+    cy.visit('/')
+    cy.contains('Forms').click()
+    cy.contains('Datepicker').click()
+
+    cy.contains('nb-card','Common Datepicker').find('input').then( input => {
+      cy.wrap(input).click()
+      let dateAssert = selectDayFromCurrent(40)
+      cy.wrap(input).invoke('prop','value').should('contain',dateAssert)
+      cy.wrap(input).should('have.value',dateAssert)//***Assertion type same as above */
+      })
+    
+  })
+
+  it('Radio button', () =>{
+    cy.visit('/')
+    cy.contains('Forms').click()
+    cy.contains('Form Layouts').click()
+
+    cy.contains('nb-card','Using the Grid')
+      .find('[type="radio"]').then( radioButtons => {
+        cy.wrap(radioButtons)
+          .first()
+          .check({force: true})
+          .should('be.checked')
+
+        cy.wrap(radioButtons)
+          .eq(1)
+          .check({force:true})
+          
+        cy.wrap(radioButtons)
+          .first()//or eq(0)
+          .should('not.be.checked') 
+          
+        cy.wrap(radioButtons)
+          .eq(2)
+          .should('be.disabled')  
+      })
+  })
+
+  it('Check Boxes', () => {
+    cy.visit('/')
+    cy.contains('Modal & Overlays').click()
+    cy.contains('Toastr').click()
+
+    cy.get('[type="checkbox"]')
+      .check({force:true})//it will check the box NOT UNCHECK IT
+      .eq(0).click({force:true})//it will uncheck the 1st box
+
+      //check will only work with input elements and used for radio buttons an check boxes
+  })
+
+  it('List and Dropdowns',() => {
+    cy.visit('/')
+    //1
+    // cy.get('nav nb-select').click()
+    // cy.get('.options-list').contains('Dark').click()
+    // cy.get('nav nb-select').should('contain','Dark')
+    // cy.get('nb-layout-header nav').should('have.css','background-color','rgb(34, 43, 69)')
+
+    //2
+    cy.get('nav nb-select').then( dropDown => {
+      cy.wrap(dropDown).click()
+      cy.get('.options-list nb-option').each( (listItem,index) => {
+        const itemText = listItem.text().trim()
+
+        const colors = {
+          "Light" : "rgb(255, 255, 255)",
+          "Dark" : "rgb(34, 43, 69)",
+          "Cosmic" : "rgb(50, 50, 89)",
+          "Corporate" : "rgb(255, 255, 255)"
+        }
+
+        cy.wrap(listItem).click()
+        cy.wrap(dropDown).should('contain', itemText)
+        cy.get('nb-layout-header nav').should('have.css','background-color',colors[itemText])
+        if (index < 3) {
+          cy.wrap(dropDown).click()
+        }
+      })
+    })
+  })
+
+  it('Web Tables', () => {
+    cy.visit('/')
+    cy.contains('Tables & Data').click()
+    cy.contains('Smart Table').click()
+
+    //1
+    cy.get('tbody').contains('tr','Larry').then( (tableRow) => {
+      cy.wrap(tableRow).find('.nb-edit').click()
+      cy.wrap(tableRow).find('[placeholder="Age"]').clear().type('25')
+      cy.wrap(tableRow).find('.nb-checkmark').click()
+      // cy.wrap(tableRow).find('.ng-star-inserted').should('contain','25')
+      cy.wrap(tableRow).find('td').eq(6).should('contain','25')
+
+    //2
+      cy.get('thead').find('.nb-plus').click()
+      cy.get('thead').find('tr').eq(2).then( tableRow => {
+        cy.wrap(tableRow).find('[placeholder="First Name"]').type('Prafull')
+        cy.wrap(tableRow).find('[placeholder="Last Name"]').type('Singh')
+        cy.wrap(tableRow).get('.nb-checkmark').click()
+      })
+
+      cy.get('tbody tr').first().find('td').then( tableColumn => {
+        cy.wrap(tableColumn).eq(2).should('contain','Prafull')
+        cy.wrap(tableColumn).eq(3).should('contain','Singh')
+      })
+    
+      //3
+      const age =[20,30,40,200]
+
+      cy.wrap(age).each( age => {
+        cy.get('thead [placeholder="Age"]').clear().type(age)
+        cy.wait(500)
+        cy.get('tbody tr').each( tableRow => {
+          if (age == 200) {
+            cy.wrap(tableRow).should('contain','No data found')
+          } else {
+            cy.wrap(tableRow).find('td').eq(6).should('contain',age)
+          }
+        })
+      })
+
+
+    })
+
+  })
+
+ it('ToolTip', () => {
+  cy.visit('/')
+  cy.contains('Modal & Overlays').click()
+  cy.contains('Tooltip').click()
+
+  cy.contains('nb-card','Colored Tooltips')
+    .contains('Default').click()
+  cy.get('nb-tooltip').should('contain',"This is a tooltip")  
+ })
+
+ it('Dialogue Box', () => {
+  cy.visit('/')
+  cy.contains('Tables & Data').click()
+  cy.contains('Smart Table').click()
+
+  //1 not recommended
+  // cy.get('tbody tr').first().find('.nb-trash').click()
+  // cy.on('window:confirm', (confirm) => {
+  //   expect(confirm).to.be.equal('Are you sure you want to delete?')
+  // })
+
+  const stub = cy.stub()
+  cy.on('window:confirm',stub)
+  cy.get('tbody tr').first().find('.nb-trash').click().then( () => {
+    expect(stub.getCall(0)).to.be.calledWith('Are you sure you want to delete?')
+  })
+
+
+
+ })
+
+})
